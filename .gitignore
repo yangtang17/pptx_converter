@@ -1,6 +1,7 @@
-# pdf and image files
+# input and output files
 **.pdf
 **.jpg
+**.pptx
 
 # Editors
 .vscode/

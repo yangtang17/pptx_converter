@@ -1,8 +1,8 @@
 import argparse
 import glob
 import logging
+import math
 import os
-import shutil
 import sys
 import tempfile
 
@@ -20,12 +20,8 @@ def main():
 
     with tempfile.TemporaryDirectory() as images_directory:
         logging.debug('### Created temporary images directory: %s\n', images_directory)
-        # pdf_to_images(args.pdf_path, images_directory)
-        # images_to_pptx(images_directory, args.pptx_path)
-
-    pdf_to_images(args.pdf_path, TMP_DIR)
-
-    # images_to_pptx(TMP_DIR, args.pptx_path)
+        pdf_to_images(args.pdf_path, images_directory)
+        images_to_pptx(images_directory, args.pptx_path)
 
 
 def pdf_to_images(pdf_path, images_directory=None, dpi=600):
@@ -54,8 +50,9 @@ def pdf_to_pil(pdf_path, dpi=600):
 def save_images(pil_images, save_dir):
     # This method helps in converting the images in PIL Image file format to the required image format
     index = 1
+    digits = int(math.log10(len(pil_images))) + 1
     for image in pil_images:
-        base_filename = 'page_' + str(index) + '.jpg'
+        base_filename = 'page_' + str(index).zfill(digits) + '.jpg'
         file_path = os.path.join(save_dir, base_filename)
         logging.debug('Saving temporary image file: %s', file_path)
 
@@ -65,32 +62,18 @@ def save_images(pil_images, save_dir):
 
 def setup_logger(verbose):
     logging_level = logging.DEBUG if verbose else logging.INFO
-    logging.basicConfig(level= logging_level,
+    logging.basicConfig(level=logging_level,
                         format='%(levelname)s - %(message)s',
                         handlers=[
                             logging.StreamHandler(sys.stdout)
                         ])
 
-#
-# # @contextlib.contextmanager
-# def make_temp_directory():
-#     temp_dir = tempfile.mkdtemp()
-#     try:
-#         yield temp_dir
-#     finally:
-#         shutil.rmtree(temp_dir)
-#
-#
-# def create_temp_folder():
-#     with make_temp_directory() as tmpdirname:
-#         print('created temporary directory', tmpdirname)
-
 
 def images_to_pptx(images_directory, pptx_path):
     logging.info('### Converting images to %s, temporary image directory: %s', pptx_path, images_directory)
     prs = pptx.Presentation()
-    for g in sorted(glob.glob(images_directory + '*')):
-        logging.debug('Converting ', g)
+    for g in sorted(glob.glob(images_directory + '/*')):
+        logging.debug('Converting %s', g)
         slide = prs.slides.add_slide(prs.slide_layouts[6])
 
         img = imageio.imread(g)
