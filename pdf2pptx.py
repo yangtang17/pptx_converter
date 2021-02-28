@@ -17,10 +17,12 @@ TMP_DIR = './test_images/'
 def main():
     args = configure_parser().parse_args()
     setup_logger(args.verbose)
+    dpi = args.dpi if args.dpi else 600
 
     with tempfile.TemporaryDirectory() as images_directory:
         logging.debug('### Created temporary images directory: %s\n', images_directory)
-        pdf_to_images(args.pdf_path, images_directory)
+
+        pdf_to_images(args.pdf_path, images_directory, dpi=dpi)
         images_to_pptx(images_directory, args.pptx_path)
 
 
