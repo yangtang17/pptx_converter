@@ -10,8 +10,13 @@ import imageio
 import pdf2image
 import pptx
 import pptx.util
+from pptx.util import Inches
 
-TMP_DIR = './test_images/'
+SLD_LAYOUT_TITLE_AND_CONTENT = 1
+SLD_LAYOUT_BLANK = 6
+
+TOP = Inches(0.5)  # top boundary
+BOTTOM = Inches(0.5)  # bottom boundary
 
 
 def main():
@@ -23,7 +28,7 @@ def main():
         logging.debug('### Created temporary images directory: %s\n', images_directory)
 
         pdf_to_images(args.pdf_path, images_directory, dpi=dpi)
-        images_to_pptx(images_directory, args.pptx_path)
+        images_to_pptx(images_directory, args.pptx_path, template_file=args.template)
 
 
 def pdf_to_images(pdf_path, images_directory=None, dpi=600):
@@ -71,21 +76,36 @@ def setup_logger(verbose):
                         ])
 
 
-def images_to_pptx(images_directory, pptx_path):
-    logging.info('### Converting images to %s, temporary image directory: %s', pptx_path, images_directory)
-    prs = pptx.Presentation()
+def images_to_pptx(images_directory, pptx_path, template_file=None):
+    logging.info('### Converting images to %s, temporary image directory: %s, template_file=%s',
+                 pptx_path, images_directory, template_file)
+
+    prs = pptx.Presentation(template_file) if template_file else pptx.Presentation()
+    layout_index = SLD_LAYOUT_TITLE_AND_CONTENT if template_file else SLD_LAYOUT_BLANK
+    slide_layout = prs.slide_layouts[layout_index]
+
     for g in sorted(glob.glob(images_directory + '/*')):
         logging.debug('Converting %s', g)
-        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        slide = prs.slides.add_slide(slide_layout)
+
+        remove_empty_placeholders(slide)
 
         img = imageio.imread(g)
-        pic_height = prs.slide_height
+        pic_height = prs.slide_height - TOP - BOTTOM
         pic_width = min(prs.slide_width, int(pic_height * img.shape[1] / img.shape[0]))
         pic_left = (prs.slide_width - pic_width) / 2
-        pic_top = 0
+        pic_top = TOP
         slide.shapes.add_picture(g, pic_left, pic_top, pic_width, pic_height)
 
     prs.save(pptx_path)
+
+
+def remove_empty_placeholders(slide):
+    for placeholder in slide.shapes.placeholders:
+        if placeholder.has_text_frame and placeholder.text_frame.text == "":
+            logging.debug("Removing one empty placeholder: %s", placeholder)
+            sp = placeholder._sp
+            sp.getparent().remove(sp)
 
 
 def configure_parser():
@@ -106,9 +126,14 @@ def configure_parser():
                         required=False,
                         dest='dpi')
 
-    parser.add_argument("-v", "--verbose",
-                        help="increase output verbosity",
-                        action="store_true")
+    parser.add_argument('-v', '--verbose',
+                        help='increase output verbosity',
+                        action='store_true')
+
+    parser.add_argument('--template',
+                        help='template file',
+                        required=False,
+                        dest='template')
     return parser
 
 
