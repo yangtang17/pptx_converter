@@ -1,3 +1,4 @@
+
 # Description
 This is a script that converts PDF file into images, then into a PowerPoint .pptx file.
 
